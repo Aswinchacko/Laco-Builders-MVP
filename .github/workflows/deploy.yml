@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
 
       - name: Install
@@ -30,20 +30,34 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Publish dist
+      - name: Publish Next.js app
         shell: powershell
         run: |
           $dest = "C:\deploy\frontend\current"
+          if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
           New-Item -ItemType Directory -Force -Path $dest | Out-Null
-          if (Test-Path "dist") {
-            Remove-Item "$dest\*" -Recurse -Force -ErrorAction SilentlyContinue
-            Copy-Item -Recurse -Force "dist\*" $dest
-            Write-Host "Frontend published → $dest"
-          } elseif (Test-Path "build") {
-            Remove-Item "$dest\*" -Recurse -Force -ErrorAction SilentlyContinue
-            Copy-Item -Recurse -Force "build\*" $dest
-            Write-Host "Frontend published → $dest"
-          } else {
-            Write-Error "No dist/ or build/ folder found after npm run build"
-            exit 1
+
+          # Next.js needs these after build
+          Copy-Item -Recurse -Force .next $dest\.next
+          Copy-Item -Force package.json $dest\
+          Copy-Item -Force package-lock.json $dest\
+          Copy-Item -Force next.config.mjs $dest\
+          if (Test-Path public) { Copy-Item -Recurse -Force public $dest\public }
+
+          Push-Location $dest
+          npm ci --omit=dev
+          Pop-Location
+
+          Write-Host "Next.js published → $dest"
+
+      - name: Restart with PM2
+        shell: powershell
+        run: |
+          $dest = "C:\deploy\frontend\current"
+          if (-not (Get-Command pm2 -ErrorAction SilentlyContinue)) {
+            npm i -g pm2
           }
+          pm2 delete laco-frontend 2>$null
+          pm2 start npm --name laco-frontend -- start --prefix $dest
+          pm2 save
+          Write-Host "App running via PM2 (next start)"
