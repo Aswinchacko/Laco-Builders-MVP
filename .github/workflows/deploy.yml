@@ -50,14 +50,19 @@ jobs:
 
           Write-Host "Next.js published → $dest"
 
-      - name: Restart with PM2
-        shell: powershell
-        run: |
-          $dest = "C:\deploy\frontend\current"
-          if (-not (Get-Command pm2 -ErrorAction SilentlyContinue)) {
-            npm i -g pm2
-          }
-          pm2 delete laco-frontend 2>$null
-          pm2 start npm --name laco-frontend -- start --prefix $dest
-          pm2 save
-          Write-Host "App running via PM2 (next start)"
+          - name: Restart with PM2
+          shell: powershell
+          run: |
+            $ErrorActionPreference = "Continue"
+            $dest = "C:\deploy\frontend\current"
+  
+            if (-not (Get-Command pm2 -ErrorAction SilentlyContinue)) {
+              npm i -g pm2
+            }
+  
+            # First run: process may not exist — ignore that
+            cmd /c "pm2 delete laco-frontend >nul 2>&1"
+  
+            pm2 start npm --name laco-frontend -- start --prefix $dest
+            pm2 save
+            Write-Host "App running via PM2 (next start)"
