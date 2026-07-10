@@ -1,0 +1,49 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: frontend-deploy
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish dist
+        shell: pwsh
+        run: |
+          $dest = "C:\deploy\frontend\current"
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          if (Test-Path "dist") {
+            Remove-Item "$dest\*" -Recurse -Force -ErrorAction SilentlyContinue
+            Copy-Item -Recurse -Force "dist\*" $dest
+            Write-Host "Frontend published → $dest"
+          } elseif (Test-Path "build") {
+            Remove-Item "$dest\*" -Recurse -Force -ErrorAction SilentlyContinue
+            Copy-Item -Recurse -Force "build\*" $dest
+            Write-Host "Frontend published → $dest"
+          } else {
+            Write-Error "No dist/ or build/ folder found after npm run build"
+            exit 1
+          }
