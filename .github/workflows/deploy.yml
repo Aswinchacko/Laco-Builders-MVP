@@ -31,7 +31,7 @@ jobs:
         run: npm run build
 
       - name: Publish dist
-        shell: pwsh
+        shell: powershell
         run: |
           $dest = "C:\deploy\frontend\current"
           New-Item -ItemType Directory -Force -Path $dest | Out-Null
