@@ -36,33 +36,25 @@ jobs:
           $dest = "C:\deploy\frontend\current"
           if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
           New-Item -ItemType Directory -Force -Path $dest | Out-Null
-
-          # Next.js needs these after build
           Copy-Item -Recurse -Force .next $dest\.next
           Copy-Item -Force package.json $dest\
           Copy-Item -Force package-lock.json $dest\
           Copy-Item -Force next.config.mjs $dest\
           if (Test-Path public) { Copy-Item -Recurse -Force public $dest\public }
-
           Push-Location $dest
           npm ci --omit=dev
           Pop-Location
-
           Write-Host "Next.js published → $dest"
 
-          - name: Restart with PM2
-          shell: powershell
-          run: |
-            $ErrorActionPreference = "Continue"
-            $dest = "C:\deploy\frontend\current"
-  
-            if (-not (Get-Command pm2 -ErrorAction SilentlyContinue)) {
-              npm i -g pm2
-            }
-  
-            # First run: process may not exist — ignore that
-            cmd /c "pm2 delete laco-frontend >nul 2>&1"
-  
-            pm2 start npm --name laco-frontend -- start --prefix $dest
-            pm2 save
-            Write-Host "App running via PM2 (next start)"
+      - name: Restart with PM2
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Continue"
+          $dest = "C:\deploy\frontend\current"
+          if (-not (Get-Command pm2 -ErrorAction SilentlyContinue)) {
+            npm i -g pm2
+          }
+          cmd /c "pm2 delete laco-frontend >nul 2>&1"
+          pm2 start npm --name laco-frontend -- start --prefix $dest
+          pm2 save
+          Write-Host "App running via PM2 (next start)"
